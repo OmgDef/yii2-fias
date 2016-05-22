@@ -111,7 +111,7 @@ class FiasHouse extends \yii\db\ActiveRecord
             static::getDb()->createCommand("CREATE TABLE {$tableName} SELECT * FROM {$primaryTable} LIMIT 0;")->execute();
         } else {
             $tableName = static::tableName();
-            static::getDb()->createCommand()->truncateTable($tableName);
+            static::getDb()->createCommand()->truncateTable($tableName)->execute();
         }
         $addresses = FiasAddressObject::find()->indexBy('address_id')->select('address_id')
             ->where(['region' => [50, 77]])->asArray()->all();
