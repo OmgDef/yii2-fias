@@ -231,7 +231,7 @@ class FiasAddressObject extends \yii\db\ActiveRecord
                 ->limit($limit);
 
             $query1 = static::find()->select('id, full_title title')->alias('ao')
-                ->where('parent_id IS NULL')->andWhere(['LIKE', 'ao.title', $address])->asArray()->limit($limit);
+                ->where('parent_id = ""')->andWhere(['LIKE', 'ao.title', $address])->asArray()->limit($limit);
 
             $query = (new Query())->select('*')->from(['tmp' => $query1->union($query2)]);
         }
