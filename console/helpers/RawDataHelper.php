@@ -50,8 +50,8 @@ class RawDataHelper
         // нормализуем адрес по яндексу
         Yii::$app->getDb()->createCommand(
             "UPDATE {$table}
-            SET full_number = CONCAT(number, IF(building IS NULL, '', CONCAT('к', building)),
-                    IF(structure IS NULL, '', CONCAT('с', structure)))
+            SET full_number = CONCAT(number, IF(building IS NULL, '', CONCAT(' к.', building)),
+                    IF(structure IS NULL, '', CONCAT(' с.', structure)))
             ")->execute();
     }
 

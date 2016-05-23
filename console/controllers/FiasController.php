@@ -36,7 +36,7 @@ class FiasController extends Controller
                 FiasHouse::getXmlFilters()
             ));
 
-            if (!$log = FiasUpdateLog::findOne(['version' => $versionId])) {
+            if (!$log = FiasUpdateLog::findOne(['version_id' => $versionId])) {
                 $log = new FiasUpdateLog();
                 $log->version_id = $versionId;
             }

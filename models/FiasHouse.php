@@ -109,6 +109,7 @@ class FiasHouse extends \yii\db\ActiveRecord
             static::getDb()->createCommand("DROP TABLE IF EXISTS {$tableName};")->execute();
             $primaryTable = static::tableName();
             static::getDb()->createCommand("CREATE TABLE {$tableName} SELECT * FROM {$primaryTable} LIMIT 0;")->execute();
+            static::getDb()->createCommand()->addColumn($tableName, 'previous_id', 'char(36)')->execute();
         } else {
             $tableName = static::tableName();
             static::getDb()->createCommand()->truncateTable($tableName)->execute();
