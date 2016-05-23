@@ -5,6 +5,7 @@ namespace omgdef\fias\models;
 use omgdef\fias\console\base\ImportModelTrait;
 use omgdef\fias\console\base\XmlReader;
 use Yii;
+use yii\db\Query;
 use yii\helpers\Console;
 
 /**
@@ -74,6 +75,7 @@ class FiasAddressObject extends \yii\db\ActiveRecord
     {
         foreach (static::find()->where(['parent_id' => $parent->address_id])->each() as $value) {
             $value->full_title = $parent->full_title . ', ' . trim($value->prefix . ' ' . $value->title);
+            $value->level = $parent->level + 1;
             $value->save(false);
 
             static::recursiveTitle($value);
@@ -88,6 +90,8 @@ class FiasAddressObject extends \yii\db\ActiveRecord
         foreach (static::find()->where('parent_id =""')->each() as $value) {
             /** @var static $value */
             $value->full_title = trim($value->prefix . ' ' . $value->title);
+            $value->level = 0;
+            $value->save(false);
             static::recursiveTitle($value);
         }
     }
@@ -138,7 +142,6 @@ class FiasAddressObject extends \yii\db\ActiveRecord
     {
         if ($temporaryTable) {
             $tableName = static::temporaryTableName();
-            //$addressObjectFields['PREVID'] = ['name' => 'previous_id', 'type' => 'uuid'];
 
             static::getDb()->createCommand("DROP TABLE IF EXISTS {$tableName};")->execute();
             $primaryTable = static::tableName();
@@ -198,6 +201,42 @@ class FiasAddressObject extends \yii\db\ActiveRecord
             'region' => 'Region',
             'prefix' => 'Prefix',
         ];
+    }
+
+    /**
+     * @param $address
+     * @return array|null|\yii\db\ActiveRecord
+     */
+    public static function findByAddress($address)
+    {
+        $level = count(explode(',', $address)) - 1;
+        return static::find()->where(['level' => $level, 'full_title' => $address])->asArray()->limit(1)->one();
+    }
+
+    /**
+     * @param $address
+     * @param null $parentId
+     * @param int $limit
+     * @return array|\yii\db\ActiveRecord[]
+     */
+    public static function findAddresses($address, $parentId = null, $limit = 10)
+    {
+        if ($parentId) {
+            $query = static::find()->select('id, full_title title')
+                ->where(['parent_id' => $parentId])->andWhere(['LIKE', 'title', $address])->asArray()->limit($limit);
+        } else {
+            $query2 = static::find()->select('ao.id, ao.full_title title')->alias('ao')
+                ->andWhere(['LIKE', 'ao.title', $address])
+                ->innerJoin(static::tableName() . ' aop', 'aop.parent_id = "" AND aop.address_id = ao.parent_id')
+                ->limit($limit);
+
+            $query1 = static::find()->select('id, full_title title')->alias('ao')
+                ->where('parent_id IS NULL')->andWhere(['LIKE', 'ao.title', $address])->asArray()->limit($limit);
+
+            $query = (new Query())->select('*')->from(['tmp' => $query1->union($query2)]);
+        }
+
+        return $query->orderBy('title')->limit($limit)->all();
     }
 
     /**

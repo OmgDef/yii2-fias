@@ -130,7 +130,7 @@ class FiasHouse extends \yii\db\ActiveRecord
             }
         }
     }
-
+    
     /**
      * @inheritdoc
      */
