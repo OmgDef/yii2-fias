@@ -35,9 +35,15 @@ class FiasAddressSearch extends FiasAddressObject
 
         $address = static::findByAddress($addressParts['address']);
 
-        if (isset($address['house_count']) && $address['house_count']) {
+        if ($address && $address['house_count']) {
             $rows = $this->findHouses($addressParts['pattern'], $address['address_id']);
             $rows = $this->setIsCompleteFlag($rows, true);
+
+            if (static::find()->where(['parent_id' => $address['address_id']])->exists()) {
+                $addressRows = static::findAddresses($addressParts['pattern'], $address['address_id']);
+                $addressRows = $this->setIsCompleteFlag($addressRows, false);
+                $rows = array_merge($rows, $addressRows);
+            }
         } else {
             $rows = static::findAddresses($addressParts['pattern'], isset($address['address_id']) ? $address['address_id'] : null);
             $rows = $this->setIsCompleteFlag($rows, false);
@@ -55,9 +61,10 @@ class FiasAddressSearch extends FiasAddressObject
     protected function findHouses($pattern, $parentId, $limit = 10)
     {
         return FiasHouse::find()->select(["CONCAT_WS(\", \",full_title, full_number) title, h.id"])->alias('h')
-            ->where(['h.address_id' => $parentId])->andWhere(['LIKE', 'full_number', $pattern])
+            ->where(['h.address_id' => $parentId])
+            ->andWhere('full_number LIKE :pattern', [':pattern' => $pattern . '%'])
             ->innerJoin(static::tableName() . ' ao', 'ao.address_id = h.address_id')
-            ->orderBy(new Expression('full_number regexp \'^[0-9]+\''))->limit($limit)->asArray()->all();
+            ->orderBy('full_number')->limit($limit)->asArray()->all();
     }
 
     /**
@@ -98,7 +105,7 @@ class FiasAddressSearch extends FiasAddressObject
             {
                 (?<= ^ | [^а-яА-ЯЁё] )
 
-                (?:ул|улица|снт|деревня|тер|пер|переулок|ал|аллея|линия|проезд|гск|ш|шоссе|г|город|обл|область|пр|проспект)
+                (?:ул|улица|снт|деревня|тер|линия|проезд|гск|город|дом|д)
 
                 (?= [^а-яА-ЯЁё] | $ )
 

@@ -74,11 +74,45 @@ class FiasAddressObject extends \yii\db\ActiveRecord
     protected static function recursiveTitle($parent)
     {
         foreach (static::find()->where(['parent_id' => $parent->address_id])->each() as $value) {
-            $value->full_title = $parent->full_title . ', ' . trim($value->prefix . ' ' . $value->title);
+            $value->full_title = $parent->full_title . ', ' . static::replaceTitle($value);
             $value->level = $parent->level + 1;
             $value->save(false);
 
             static::recursiveTitle($value);
+        }
+    }
+
+    /**
+     * @param $model
+     * @return string
+     */
+    protected static function replaceTitle($model)
+    {
+        switch ($model->prefix) {
+            case 'обл':
+                return $model->title . ' область';
+            case 'р-н':
+                return $model->title . ' район';
+            case 'проезд':
+                return $model->title . ' проезд';
+            case 'б-р':
+                return $model->title . ' бульвар';
+            case 'пер':
+                return $model->title . ' переулок'; 
+            case 'ал':
+                return $model->title . ' аллея';
+            case 'ш':
+                return $model->title . ' шоссе';
+            case 'г':
+                return 'г. ' . $model->title;
+            case 'линия':
+                return 'линия ' . $model->title;
+            case 'ул':
+                return 'ул. ' . $model->title;
+            case 'пр-кт':
+                return $model->title . ' проспект';
+            default:
+                return trim($model->prefix . '. ' . $model->title);
         }
     }
 
@@ -89,7 +123,7 @@ class FiasAddressObject extends \yii\db\ActiveRecord
     {
         foreach (static::find()->where('parent_id =""')->each() as $value) {
             /** @var static $value */
-            $value->full_title = trim($value->prefix . ' ' . $value->title);
+            $value->full_title = static::replaceTitle($value);
             $value->level = 0;
             $value->save(false);
             static::recursiveTitle($value);
@@ -223,19 +257,23 @@ class FiasAddressObject extends \yii\db\ActiveRecord
     {
         if ($parentId) {
             $query = static::find()->select('id, full_title title')
-                ->where(['parent_id' => $parentId])->andWhere(['LIKE', 'title', $address])->asArray()->limit($limit);
+                ->where(['parent_id' => $parentId])
+                ->andWhere(['LIKE', 'full_title', $address])
+
+                ->asArray()->limit($limit);
         } else {
             $query2 = static::find()->select('ao.id, ao.full_title title')->alias('ao')
-                ->andWhere(['LIKE', 'ao.title', $address])
-                ->innerJoin(static::tableName() . ' aop', 'aop.parent_id = "" AND aop.address_id = ao.parent_id')
+                ->andWhere(['LIKE', 'ao.full_title', $address])
                 ->limit($limit);
 
             $query1 = static::find()->select('id, full_title title')->alias('ao')
-                ->where('parent_id = ""')->andWhere(['LIKE', 'ao.title', $address])->asArray()->limit($limit);
+                ->where('parent_id = ""')
+                ->andWhere(['LIKE', 'ao.full_title', $address])
+                ->asArray()->limit($limit);
 
             $query = (new Query())->select('*')->from(['tmp' => $query1->union($query2)]);
         }
-
+        
         return $query->orderBy('title')->limit($limit)->all();
     }
 
